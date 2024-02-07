@@ -64,14 +64,13 @@ class Robot:
         """write() : This method creates a dictionnary that can be fed to the write() method."""
         result = {} # Dictionnary result
         try:    
-            if(len(positions) > 1 and leg_id == -1): # Checks if the 'positions' array have a length greater than 1 and 'leg_id' is equal to -1 (Means that we have a list of lists)
+            if(len(positions) == 6 and leg_id == -1): # Checks if the 'positions' array have a length greater than 1 and 'leg_id' is equal to -1 (Means that we have a list of lists)
                 for leg_index, motors in self.legs.items(): #Key:value For-loop in the 'self.legs' array
                     for motor, position in zip(motors, positions[leg_index - 1]): #Key:value For-loop in the zipped result of motors and positions[leg_index -1]
                         result[motor] = position # Creates a key:value element in the dictionnary 'result'
                 return result # Returns the result
-            elif(len(positions) == 1 and leg_id != -1): # Checks if the 'positions' array have a length of 1 and 'leg_id' is different from -1 (Means that we have only one list on the 'positions' variable instead of a list of lists)
-                temp = self.legs[leg_id] # Take the first (and only) element in the 'positions' list
-                return dict(zip(temp, positions[0])) # Returns a new dictionary by zipping the keys from 'self.legs' with the values from 'positions'
+            elif(len(positions) == 3 and leg_id != -1): # Checks if the 'positions' array have a length of 1 and 'leg_id' is different from -1 (Means that we have only one list on the 'positions' variable instead of a list of lists)
+                return dict(zip(leg_id, positions)) # Returns a new dictionary by zipping the keys from 'leg_id' with the values from 'positions'
         except Exception: # Exception handling
             print(traceback.format_exc()) # Traceback print
     
@@ -156,7 +155,7 @@ class robot_physical(Robot):
                         result.append(motors_group) # Once it has looped through the 3 motors of each leg, it appends the motor group to the final result array    
                     return result # Returns the final result array, containing all the motors position
                 case _: # In this case, we assume that we have specified a 'leg_id', so we will read positions to only one leg
-                    return dxl.get_present_position([leg_id]) # Returns the 3 motors positions of one leg 
+                    return dxl.get_present_position(leg_id) # Returns the 3 motors positions of one leg 
         except Exception: # Exception handling
             print(traceback.format_exc()) # Traceback print
 
