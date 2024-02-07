@@ -6,7 +6,6 @@ from onshape_to_robot.simulation import Simulation
 import kinematics
 from scipy.spatial.transform import Rotation
 from main import start_thread
-import readchar
 import threading
 
 # Global variable for simulation mode
@@ -165,10 +164,9 @@ def execute():
         sim.tick()
 
 
-
 def simulation_init(mode):
     global listener_thread
-    print("Hey")
+    print("Initialiazing Simulation")
     setup_simulation(mode)
     if(mode == "move_leg" or mode == "move_robot_center" or mode == "direct" or mode == "inverse"):
         setup_controls()

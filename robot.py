@@ -5,6 +5,7 @@ import constants
 import traceback
 import math
 import pypot.dynamixel
+import simulation
 
 available_ports = None
 dxl = None
@@ -12,7 +13,6 @@ dxl = None
 """Class Robot : This class serve to define the common attributes and methods for the Simulation and Physical Robot"""
 class Robot:
     INITIAL_POSITION = [150, 10, 90]  # Define the hexapod initial position 
-
     
     def __init__(self):
         """__init__() :This method must be implemented in subclassess."""
@@ -92,6 +92,8 @@ class Robot:
                                                          oriented=True, 
                                                          leg_id=leg_id, 
                                                          angle_direction=direction) # Move the robot towards the angle direction (0 = forward)
+                            print("walking...")
+
                         case "rotate":
                             thetas = kinematics.triangle(150, 
                                                          100, 
@@ -99,9 +101,10 @@ class Robot:
                                                          90, 
                                                          (time.time() * 0.5 + (0.5 * (index % 2)))
                                                          ) # Rotates the robot
+                            print("rotating...")
+
                         case "tilt-x":
-                            thetas = kinematics.compute_ik_oriented(0, 
-                                                                    50 * math.sin(time.time()),
+                            thetas = kinematics.compute_ik_oriented(50 * math.sin(time.time()),
                                                                     0, 
                                                                     0, 
                                                                     leg_id) # Tilt on X axis
@@ -123,8 +126,14 @@ class Robot:
                     final_pos.append(thetas) #Appends the result of kinematics computation at each loop
                 to_feed = self.format_dict(final_pos) # Creates a dictionnary that can be fed to the 'write()' function
                 self.write(to_feed) #Writes the new positions to the motors
+        except KeyboardInterrupt:
+            print("testttt")
         except Exception: # Exception handling
+            print("We're here")
             print(traceback.format_exc()) # Traceback print
+        finally:
+            print("BEBEBEB")
+            return
 
 """Class robot_physical : This class serve to define the Physical Robot particularities"""
 class robot_physical(Robot):
@@ -137,7 +146,11 @@ class robot_physical(Robot):
                         4:[41,42,43],
                         5:[51,52,53],
                         6:[61,62,63]}
+        self.type = "physical"
     
+    def launch(self):
+        robot_serial_init()
+
     def read(self, leg_id = -1):
         """read() : This method reads all the motors current positions and returns a dictionnary."""
         result = [] # Final result array initialization
@@ -183,7 +196,11 @@ class robot_simulation(Robot):
                      4:['j_c1_lf','j_thigh_lf','j_tibia_lf'],
                      5:['j_c1_lm','j_thigh_lm','j_tibia_lm'],
                      6:['j_c1_lr','j_thigh_lr','j_tibia_lr']}
+        self.type = "virtual"
     
+    def launch(self):
+        simulation.simulation_init()
+
     def read(self, leg_id):
         """read() : This method reads all the motors current positions and returns a dictionnary."""
         raise NotImplementedError("robot_simulation:read() -> Method not implemented yet.")
@@ -214,3 +231,33 @@ def scan_motors():
     except Exception:
         # print(traceback.format_exc())
         return constants.execution.motor_scan_error.value[0], constants.execution.motor_scan_error.value[1]
+
+
+    # move_leg = 1
+    # move_robot_center = 2
+    # robot_walk = 3
+    # robot_rotate = 4
+
+
+def robot_action(robot, mode):
+
+    input_param = []
+    robot.launch()
+    pi = math.pi
+    match mode:
+        case "1" :
+            input_param.append(int(input("Enter desired X:")))
+            input_param.append(int(input("Enter desired Y:")))
+            input_param.append(int(input("Enter desired Z:")))
+            input_param.append(int(input("Enter desired duration:")))
+            input_param.append(int(input("Enter desired Leg ID:")))
+            robot.move_leg(*input_param)
+        case "2" : 
+            input_param.append(input("Enter tilt methods [tilt-x | tilt-y | tilt-z | tilt-xy ] :"))
+            robot.move(*input_param)
+        case "3" :
+            input_param.append(int(input("Enter desired walk direction : in fractions of pi")))
+            robot.robot_walk("walk", *input_param)
+        case "4" : 
+            robot.robot_walk("rotate")
+

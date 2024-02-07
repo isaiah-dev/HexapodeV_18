@@ -16,13 +16,11 @@ def print_behaviour_choice():
     print("2. Move robot center to position")
     print("3. Walk in a straight line")
     print("4. Rotate robot")
-    print("5. Direct")
-    print("6. Inverse")
-    print("7. Exit")
+    print("5. Exit")
     behaviour_choice = input("Choice : ")
     
     return behaviour_choice
-    
+
 
 def main_menu():
     while(True):
@@ -40,20 +38,24 @@ def main_menu():
                 constants.set_constants(constants.SOFTMODE.PHANTOMX)
                 while(True):
                     behaviour_choice = print_behaviour_choice()
-                    if behaviour_choice == "7":
+                    if behaviour_choice == "5":
                         break
                     else:
-                        raise NotImplementedError("Not handled yed.")
+                        r = robot.robot_physical()
+                        robot.robot_action(r, behaviour_choice)
+                        # raise NotImplementedError("Not handled yed.")
                 clear_screen()
             case "2":
                 print("- Simulation Mode -")
                 constants.set_constants(constants.SOFTMODE.PHANTOMX_SIMULATION)
                 while(True):
                     behaviour_choice = print_behaviour_choice()
-                    if behaviour_choice == "7":
+                    if behaviour_choice == "5":
                         break
                     else:
-                        simulation.simulation_init(constants.BEHAVIOUR_MODE(int(behaviour_choice)).name)
+                        r = robot.robot_simulation()
+                        robot.robot_action(r, behaviour_choice)
+                        # simulation.simulation_init(constants.BEHAVIOUR_MODE(int(behaviour_choice)).name)
                 clear_screen()
             case _:
                 print("Bye!")
