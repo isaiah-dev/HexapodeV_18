@@ -6,13 +6,16 @@ import traceback
 import math
 import pypot.dynamixel
 import simulation
+import reality
+
 
 available_ports = None
 dxl = None
 
 """Class Robot : This class serve to define the common attributes and methods for the Simulation and Physical Robot"""
 class Robot:
-    INITIAL_POSITION = [150, 10, 90]  # Define the hexapod initial position 
+    INITIAL_POSITION = [150, 10, 90]  # Define the hexapod initial position
+    mode_parameters = []
     
     def __init__(self):
         """__init__() :This method must be implemented in subclassess."""
@@ -26,30 +29,32 @@ class Robot:
         """write() :This method must be implemented in subclassess."""
         raise NotImplementedError("write() method must be implemented in subclasses.")
     
-    def move_leg(self,x, y , z, duration, leg_id):
+    def move_leg(self,x, y , z, duration, leg_id,T):
         """move_leg() : This method can move a hexapod's single leg to an arbitrary x, y, z position"""
         leg = self.legs[leg_id] # Gets the motors ids of the desired leg
-        self.interpolate([x, y , z],duration,leg) # Makes a linear interpolation of the desired motor, from its current position to the desired x, y, z position
+        self.interpolate([x, y , z],duration,leg,T) # Makes a linear interpolation of the desired motor, from its current position to the desired x, y, z position
 
     
-    def interpolate(self, final_pos,duration,leg_id = -1):
+    def interpolate(self, final_pos, duration,leg_id = -1,T = time.time()):
         """interpolate() : This method can execute an interpolation on a single leg or the entire robot from its present position to an arbitrary x, y, z position"""
         alpha = 0 # Initialization of the 'alpha' variable for interpolation
         try:
-            t0 = time.time() # Define the initial time
+            t0 = T # Define the initial time
             leg_pos = self.read(leg_id) # Reads the current position of one or all the legs
             A = np.array(leg_pos) # Creates a np.array of the current leg/legs positions
             B = np.array(kinematics.compute_ik(final_pos[0], final_pos[1] , final_pos[2])) # Creates a np.array of the final x, y, z positions
-            t = time.time() - t0 # Created the differential time
+            t = T - t0 # Created the differential time
             
             
             while(t < duration): # Wile loop -> Continues till the differential time is lower than the 'duration' parameter
+            # if (t < duration):
                 alpha = t / duration #Updating the 'alpha' variable at each While loop for smooth interpolation
                 M = ((B-A) * alpha) + A #Linear Interpolation formula
                 new_pos = self.format_dict(M,leg_id=leg_id) #Creates a dictionnary of the calculated interpolation, in order to be fed to the 'write()' method
                 self.write(new_pos) #Writing the positions to one or all the motors
-                time.sleep(0.01) # Sleep function -> '0.01' = 100 Hertz
-                t = time.time() - t0 # Decreasing the differential time
+                # time.sleep(0.01) # Sleep function -> '0.01' = 100 Hertz
+                t = T - t0 # Decreasing the differential time
+
         except Exception: # Exception handling
             print(traceback.format_exc()) # Traceback print
             
@@ -74,16 +79,16 @@ class Robot:
         except Exception: # Exception handling
             print(traceback.format_exc()) # Traceback print
     
-    def move(self, method="walk", direction=0):
+    def move(self, method="walk",T = time.time(), direction=0):
         """move() : This method moves the hexapod, based on the method passed as parameter."""
-        try:
-            while True:   
-                final_pos = [] # Final positions array initialization
-                index = 0 # Index variable initialization for motor de-phasing
-                for leg_id, _ in self.legs.items(): # For-loop on the legs array
-                    index += 1 # Increasing the index at each loop for legs de-phasing
-                    match method: # Match-Case on the 'method' parameter
-                        case "walk":
+        try:  
+            final_pos = [] # Final positions array initialization
+            index = 0 # Index variable initialization for motor de-phasing
+            for leg_id, _ in self.legs.items(): # For-loop on the legs array
+                index += 1 # Increasing the index at each loop for legs de-phasing
+                match method: # Match-Case on the 'method' parameter
+                    case "walk":
+                        if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
                             thetas = kinematics.triangle(-30, 
                                                          5, 
                                                          -60, 
@@ -92,48 +97,111 @@ class Robot:
                                                          oriented=True, 
                                                          leg_id=leg_id, 
                                                          angle_direction=direction) # Move the robot towards the angle direction (0 = forward)
-                            print("walking...")
+                        else:
+                            thetas = kinematics.triangle(150, 
+                                                        -150, 
+                                                        100, 
+                                                        90, 
+                                                        (T * 0.5 + (0.5 * (index % 2))), 
+                                                        oriented=True, 
+                                                        leg_id=leg_id, 
+                                                        angle_direction=direction) # Move the robot towards the angle direction (0 = forward)
 
-                        case "rotate":
+                    case "rotate":
+                        if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
+                            thetas = kinematics.triangle(150, 
+                                                        -80, 
+                                                        100, 
+                                                        90, 
+                                                        (T * 0.5 + (0.5 * (index % 2)))
+                                                        ) # Rotates the robot
+                        else:
                             thetas = kinematics.triangle(150, 
                                                          100, 
                                                          50, 
                                                          90, 
                                                          (time.time() * 0.5 + (0.5 * (index % 2)))
                                                          ) # Rotates the robot
-                            print("rotating...")
 
-                        case "tilt-x":
+                    case "tilt-x":
+                        if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
+                            thetas = kinematics.compute_ik_oriented(50 * math.sin(T),
+                                                                0, 
+                                                                -180, 
+                                                                leg_id) # Tilt on X axis
+                        else:
                             thetas = kinematics.compute_ik_oriented(50 * math.sin(time.time()),
                                                                     0, 
                                                                     0, 
                                                                     leg_id) # Tilt on X axis
-                        case "tilt-y":
+                    case "tilt-y":
+                        if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
+                            thetas = kinematics.compute_ik_oriented(50 * math.cos(T), 
+                                                                0, 
+                                                                -180, 
+                                                                leg_id) # Tilt on Y axis
+                        else:
                             thetas = kinematics.compute_ik_oriented(0, 
                                                                     50 * math.cos(time.time()), 
                                                                     0, 
                                                                     leg_id) # Tilt on Y axis
-                        case "tilt-z":
+                            
+                    case "tilt-z":
+                        if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
+                            thetas = kinematics.compute_ik_oriented(0, 
+                                                                0, 
+                                                                (-50 * math.cos(T))-200, 
+                                                                leg_id) # Tilt on Z axis
+                        else:
                             thetas = kinematics.compute_ik_oriented(0, 
                                                                     0, 
                                                                     50 * math.cos(time.time()), 
                                                                     leg_id) # Tilt on Z axis
-                        case "tilt-xy":
+                            
+                    case "tilt-xy":
+                        if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
+                            thetas = kinematics.compute_ik_oriented(50 * math.cos(T), 
+                                                                50 * math.sin(T), 
+                                                                -180, 
+                                                                leg_id) # Tilt on X-Y axis (circle)
+                        else:
                             thetas = kinematics.compute_ik_oriented(50 * math.cos(time.time()), 
                                                                     50 * math.sin(time.time()), 
                                                                     0, 
                                                                     leg_id) # Tilt on X-Y axis (circle)
-                    final_pos.append(thetas) #Appends the result of kinematics computation at each loop
-                to_feed = self.format_dict(final_pos) # Creates a dictionnary that can be fed to the 'write()' function
-                self.write(to_feed) #Writes the new positions to the motors
-        except KeyboardInterrupt:
-            print("testttt")
+                            
+                final_pos.append(thetas) #Appends the result of kinematics computation at each loop
+            to_feed = self.format_dict(final_pos) # Creates a dictionnary that can be fed to the 'write()' function
+            self.write(to_feed) #Writes the new positions to the motors
         except Exception: # Exception handling
-            print("We're here")
             print(traceback.format_exc()) # Traceback print
-        finally:
-            print("BEBEBEB")
-            return
+    
+    def ask_for_parameters(self):
+        input_param = []
+        match constants.BEHAVIOUR:
+            case constants.behaviour_mode.move_leg :
+                input_param.append(int(input("Enter desired X: ")))
+                input_param.append(int(input("Enter desired Y: ")))
+                input_param.append(int(input("Enter desired Z: ")))
+                input_param.append(int(input("Enter desired duration: ")))
+                input_param.append(int(input("Enter desired Leg ID: "))) 
+            case constants.behaviour_mode.move_robot_center : 
+                input_param.append(input("Enter tilt methods [tilt-x | tilt-y | tilt-z | tilt-xy ]: "))
+            case constants.behaviour_mode.robot_walk :
+                input_param.append(int(input("Enter desired walk direction [in fractions of pi]: ")))
+        self.mode_parameters = input_param
+        
+    def execute_task(self, T):
+        match constants.BEHAVIOUR:
+            case constants.behaviour_mode.move_leg :
+                self.move_leg(*self.mode_parameters, T)
+            case constants.behaviour_mode.move_robot_center : 
+                self.move(*self.mode_parameters,T)
+            case constants.behaviour_mode.robot_walk :
+                self.move("walk",T ,*self.mode_parameters)
+            case constants.behaviour_mode.robot_rotate : 
+                self.move("rotate", T)
+        
 
 """Class robot_physical : This class serve to define the Physical Robot particularities"""
 class robot_physical(Robot):
@@ -147,9 +215,7 @@ class robot_physical(Robot):
                         5:[51,52,53],
                         6:[61,62,63]}
         self.type = "physical"
-    
-    def launch(self):
-        robot_serial_init()
+        constants.set_constants(constants.SOFTMODE.PHANTOMX)
 
     def read(self, leg_id = -1):
         """read() : This method reads all the motors current positions and returns a dictionnary."""
@@ -196,19 +262,61 @@ class robot_simulation(Robot):
                      4:['j_c1_lf','j_thigh_lf','j_tibia_lf'],
                      5:['j_c1_lm','j_thigh_lm','j_tibia_lm'],
                      6:['j_c1_lr','j_thigh_lr','j_tibia_lr']}
+        self.present_positions = [[0,0,0],
+                                  [0,0,0],
+                                  [0,0,0],
+                                  [0,0,0],
+                                  [0,0,0],
+                                  [0,0,0]]
         self.type = "virtual"
-    
-    def launch(self):
-        simulation.simulation_init()
+        constants.set_constants(constants.SOFTMODE.PHANTOMX_SIMULATION)
 
-    def read(self, leg_id):
-        """read() : This method reads all the motors current positions and returns a dictionnary."""
-        raise NotImplementedError("robot_simulation:read() -> Method not implemented yet.")
+    def merge_legs_positions_dict(self):
+        count = 0
+        merged_positions = {}
+        for leg_group in self.legs.values():
+            k = 0
+            for joint_name in leg_group:
+                # print(type(joint_name))
+                temp = self.present_positions[count]
+                # print(temp)
+                merged_positions[joint_name] = temp[k]
+                k += 1
+            count += 1
+        return merged_positions
     
+    def update_present_positions(self, new_values):
+        for index, leg_group in self.legs.items():
+            for joint_name in leg_group:
+                if joint_name in new_values:
+                    k = leg_group.index(joint_name)
+                    self.present_positions[index - 1][k] = new_values[joint_name]
+
+    def read(self, leg_id = -1):
+        """read() : This method reads all the motors current positions and returns a dictionnary."""
+        try:
+            match leg_id: # Match-Case on the 'leg_id' parameter
+                case -1: # in this case, we assume that we don't have specified a 'leg_id', so we will read positions to all motors
+                    return self.present_positions
+                case _:
+                    result = []
+                    # In this case, we assume that we have specified a 'leg_id', so we will read positions to only one leg
+                    merged = self.merge_legs_positions_dict()
+                    for joint in leg_id:
+                        result.append(merged[joint])
+                    return result # Returns the 3 motors positions of one leg 
+        except Exception: # Exception handling
+            print(traceback.format_exc()) # Traceback print
+
     def write(self, new_positions):
         """write() : This method writes positions to one or all the motors."""
-        raise NotImplementedError("robot_simulation:write() -> Method not implemented yet.")
-
+        new_legs_pos = [] # Final result dictionnary initialization
+        try:
+            self.update_present_positions(new_positions)
+            new_legs_pos = self.merge_legs_positions_dict()
+            simulation.sim.setJoints(new_legs_pos) # Writes the positions of one or all the motors after the For-loop
+        except Exception: # Exception Handling
+            print(traceback.format_exc()) # Traceback print
 
 
 def robot_serial_init():
@@ -233,31 +341,19 @@ def scan_motors():
         return constants.execution.motor_scan_error.value[0], constants.execution.motor_scan_error.value[1]
 
 
-    # move_leg = 1
-    # move_robot_center = 2
-    # robot_walk = 3
-    # robot_rotate = 4
+
+def robot_action(rob_type,behaviour):
+    constants.set_behaviour_mode(constants.behaviour_mode(int(behaviour)))
+    
+    match rob_type:
+        case "1":
+            reality.__init__()     
+        case "2":
+            simulation.__init__()
+    
 
 
-def robot_action(robot, mode):
 
-    input_param = []
-    robot.launch()
-    pi = math.pi
-    match mode:
-        case "1" :
-            input_param.append(int(input("Enter desired X:")))
-            input_param.append(int(input("Enter desired Y:")))
-            input_param.append(int(input("Enter desired Z:")))
-            input_param.append(int(input("Enter desired duration:")))
-            input_param.append(int(input("Enter desired Leg ID:")))
-            robot.move_leg(*input_param)
-        case "2" : 
-            input_param.append(input("Enter tilt methods [tilt-x | tilt-y | tilt-z | tilt-xy ] :"))
-            robot.move(*input_param)
-        case "3" :
-            input_param.append(int(input("Enter desired walk direction : in fractions of pi")))
-            robot.robot_walk("walk", *input_param)
-        case "4" : 
-            robot.robot_walk("rotate")
 
+            
+    
