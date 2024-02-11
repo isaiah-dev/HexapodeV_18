@@ -34,7 +34,7 @@ class Robot:
         leg = self.legs[leg_id] # Gets the motors ids of the desired leg
         self.interpolate([x, y , z],duration,leg,T) # Makes a linear interpolation of the desired motor, from its current position to the desired x, y, z position
 
-    
+     
     def interpolate(self, final_pos, duration,leg_id = -1,T = time.time()):
         """interpolate() : This method can execute an interpolation on a single leg or the entire robot from its present position to an arbitrary x, y, z position"""
         alpha = 0 # Initialization of the 'alpha' variable for interpolation
@@ -45,7 +45,7 @@ class Robot:
             B = np.array(kinematics.compute_ik(final_pos[0], final_pos[1] , final_pos[2])) # Creates a np.array of the final x, y, z positions
             t = T - t0 # Created the differential time
             
-            
+             
             while(t < duration): # Wile loop -> Continues till the differential time is lower than the 'duration' parameter
             # if (t < duration):
                 alpha = t / duration #Updating the 'alpha' variable at each While loop for smooth interpolation
@@ -79,6 +79,11 @@ class Robot:
         except Exception: # Exception handling
             print(traceback.format_exc()) # Traceback print
     
+
+    ## A FAIRE           :  DÉCOUPER LA FONCTION MOVE  ET LA REDUIRE 
+            
+
+
     def move(self, method="walk",T = time.time(), direction=0):
         """move() : This method moves the hexapod, based on the method passed as parameter."""
         try:  
@@ -93,15 +98,15 @@ class Robot:
                                                          5, 
                                                          -60, 
                                                          50, 
-                                                         (time.time() * 0.5 + (0.5 * (index % 2))), 
+                                                         (T * 0.5 + (0.5 * (index % 2))), 
                                                          oriented=True, 
                                                          leg_id=leg_id, 
                                                          angle_direction=direction) # Move the robot towards the angle direction (0 = forward)
                         else:
-                            thetas = kinematics.triangle(150, 
-                                                        -150, 
-                                                        100, 
-                                                        90, 
+                            thetas = kinematics.triangle(-30, 
+                                                        -180, 
+                                                        -60, 
+                                                        50, 
                                                         (T * 0.5 + (0.5 * (index % 2))), 
                                                         oriented=True, 
                                                         leg_id=leg_id, 
@@ -110,65 +115,65 @@ class Robot:
                     case "rotate":
                         if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
                             thetas = kinematics.triangle(150, 
-                                                        -80, 
+                                                        100, 
                                                         100, 
                                                         90, 
                                                         (T * 0.5 + (0.5 * (index % 2)))
                                                         ) # Rotates the robot
                         else:
                             thetas = kinematics.triangle(150, 
-                                                         100, 
+                                                         -80, 
                                                          50, 
                                                          90, 
-                                                         (time.time() * 0.5 + (0.5 * (index % 2)))
+                                                         (T * 0.5 + (0.5 * (index % 2)))
                                                          ) # Rotates the robot
 
                     case "tilt-x":
                         if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
                             thetas = kinematics.compute_ik_oriented(50 * math.sin(T),
-                                                                0, 
-                                                                -180, 
-                                                                leg_id) # Tilt on X axis
+                                                                    0, 
+                                                                    0, 
+                                                                    leg_id) # Tilt on X axis
                         else:
-                            thetas = kinematics.compute_ik_oriented(50 * math.sin(time.time()),
+                            thetas = kinematics.compute_ik_oriented(50 * math.sin(T),
                                                                     0, 
-                                                                    0, 
+                                                                    -180, 
                                                                     leg_id) # Tilt on X axis
                     case "tilt-y":
                         if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
                             thetas = kinematics.compute_ik_oriented(50 * math.cos(T), 
-                                                                0, 
-                                                                -180, 
-                                                                leg_id) # Tilt on Y axis
-                        else:
-                            thetas = kinematics.compute_ik_oriented(0, 
-                                                                    50 * math.cos(time.time()), 
                                                                     0, 
+                                                                    0, 
+                                                                    leg_id) # Tilt on Y axis
+                        else:
+                            thetas = kinematics.compute_ik_oriented(50 * math.cos(T), 
+                                                                    0,
+                                                                    -180, 
                                                                     leg_id) # Tilt on Y axis
                             
                     case "tilt-z":
                         if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
                             thetas = kinematics.compute_ik_oriented(0, 
+                                                                    0, 
+                                                                    50 * math.cos(T), 
+                                                                    leg_id) # Tilt on Z axis
+                        else:
+                            thetas = kinematics.compute_ik_oriented(0, 
                                                                 0, 
                                                                 (-50 * math.cos(T))-200, 
                                                                 leg_id) # Tilt on Z axis
-                        else:
-                            thetas = kinematics.compute_ik_oriented(0, 
-                                                                    0, 
-                                                                    50 * math.cos(time.time()), 
-                                                                    leg_id) # Tilt on Z axis
                             
                     case "tilt-xy":
                         if constants.ROBOT_TYPE == constants.SOFTMODE.PHANTOMX:
                             thetas = kinematics.compute_ik_oriented(50 * math.cos(T), 
+                                                                    50 * math.sin(T), 
+                                                                    0, 
+                                                                    leg_id) # Tilt on X-Y axis (circle)
+                        else:
+                            thetas = kinematics.compute_ik_oriented(50 * math.cos(T), 
                                                                 50 * math.sin(T), 
                                                                 -180, 
                                                                 leg_id) # Tilt on X-Y axis (circle)
-                        else:
-                            thetas = kinematics.compute_ik_oriented(50 * math.cos(time.time()), 
-                                                                    50 * math.sin(time.time()), 
-                                                                    0, 
-                                                                    leg_id) # Tilt on X-Y axis (circle)
                             
                 final_pos.append(thetas) #Appends the result of kinematics computation at each loop
             to_feed = self.format_dict(final_pos) # Creates a dictionnary that can be fed to the 'write()' function
@@ -251,8 +256,8 @@ class robot_physical(Robot):
         except Exception: # Exception Handling
             print(traceback.format_exc()) # Traceback print
     
-"""Class robot_simulation : This class serve to define the Simulation Robot particularities"""
 class robot_simulation(Robot):
+    """Class robot_simulation : This class is used to define the Simulation Robot particularities"""
     
     def __init__(self):
         """__init__() :This method instantiates the robot legs."""
@@ -351,7 +356,6 @@ def robot_action(rob_type,behaviour):
         case "2":
             simulation.__init__()
     
-
 
 
 

@@ -12,8 +12,8 @@ def __init__():
 
 
 def reality_execute():
-    T = time.time()
     while True:
-    
+        T = time.time()
         rob.execute_task(T)
+        print(f'TIME: {T}')
     
