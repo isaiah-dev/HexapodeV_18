@@ -205,8 +205,7 @@ def modulo180(angle):
 
     angle = angle % 360
     if angle > 180:
-        return -360 + angle
-
+        return -360 + angle 
     return angle
 
 
@@ -274,7 +273,7 @@ def triangle(x, z, h, w, t, oriented = False, leg_id = 0, angle_direction = 0):
         index2 = 1
         T = t2 - triangle_base - triangle_side
         T = T / periode
-        
+
     # Sélecti on de deux points
     P1 = np.array(points[index1])
     P2 = np.array(points[index2])

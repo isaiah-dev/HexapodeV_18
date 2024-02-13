@@ -10,10 +10,8 @@ def __init__():
     rob.ask_for_parameters()
     reality_execute()
 
-
 def reality_execute():
     while True:
         T = time.time()
         rob.execute_task(T)
-        print(f'TIME: {T}')
-    
+        print(f'TIME: {T}') 

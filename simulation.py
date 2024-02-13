@@ -28,7 +28,6 @@ def __init__():
     
     simulation_execute()
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", "-m", type=str, default="direct", help="test")

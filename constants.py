@@ -24,7 +24,6 @@ class behaviour_mode(Enum):
     robot_walk = 3
     robot_rotate = 4
 
-
 class SOFTMODE(Enum):
     PHANTOMX = "PHANTOMX"
     PHANTOMX_SIMULATION = "PHANTOMX_SIMULATION"
